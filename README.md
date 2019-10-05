@@ -1,6 +1,4 @@
-# Verilog example
+# Firmware HAL(Hardware Abstract Layer)
 
-- JKFF
-- UART
-
+- LCD1602, use I2C PCF8572 to output
 
