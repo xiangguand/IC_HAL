@@ -66,7 +66,7 @@
 typedef struct _SSD1306{
     void (*send_command)(uint8_t cmd);       // D/C:Low, transfer command  
     void (*send_multi_command)(uint8_t *cmd, uint16_t bytes);
-    void (*write_multi_pixels)(uint8_t *pixel, uint16_t bytes);
+    void (*write_multi_pixels)(const char *pixel, uint16_t bytes);
     void (*_delay_ms)(uint32_t delay_ms);
 }SSD1306_t;
 
@@ -75,6 +75,7 @@ typedef struct _OLED{
     void (*fill)(uint8_t pixel_value);
     void (*update)(void);
     int (*setBlock)(uint8_t pos_x, uint8_t pos_y, uint8_t width, uint8_t height);
+    void (*write_words)(uint8_t pos_x, uint8_t pos_y, uint8_t *words);
 }OLED_t;
 
 

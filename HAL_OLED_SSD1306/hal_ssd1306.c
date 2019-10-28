@@ -1,4 +1,5 @@
 #include "hal_ssd1306.h"
+#include "font.h"
 #include <stdlib.h>
 #include <string.h>
 
@@ -6,16 +7,18 @@ static void ssd1306_init(void);
 static void ssd1306_fill(uint8_t pixel_value);
 static void ssd1306_update(void);
 static int ssd1306_setBlock(uint8_t pos_x, uint8_t pos_y, uint8_t width, uint8_t height);
+static void ssd1306_write_words(uint8_t pos_x, uint8_t pos_y, uint8_t *words);
 
 // Base driver to change GPIO
 extern SSD1306_t ssd1306;
-uint8_t ssd_buf[SSD1306_BUF_SIZE];
+char ssd_buf[SSD1306_BUF_SIZE];
 
 OLED_t oled = {                           \
     .init = ssd1306_init,                 \
     .fill = ssd1306_fill,                 \
     .update = ssd1306_update,             \
     .setBlock = ssd1306_setBlock,         \
+    .write_words = ssd1306_write_words,   \
 };
 
 
@@ -64,6 +67,9 @@ static void ssd1306_init(void) {
     ssd1306.send_multi_command(temp2, 2);
     
     ssd1306.send_command(SSD1306_DISPLAYON);
+    
+    oled.fill(0x00);
+    oled.update();
 }
 
 static void ssd1306_fill(uint8_t pixel_value) {
@@ -80,9 +86,22 @@ static void ssd1306_update(void) {
 }
 
 // return bytes
+// pos_x: 0~127
+// pos_y: 0~7
 static int ssd1306_setBlock(uint8_t pos_x, uint8_t pos_y, uint8_t width, uint8_t height) {
-    if((height > 7) || width > 127) return -1;
+    if(width > 127 || height > 7) return -1;
     uint8_t cmd[] = {SSD1306_PAGEADDR, pos_y, pos_y+height, SSD1306_COLUMNADDR, pos_x, pos_x+width};
     ssd1306.send_multi_command(cmd, sizeof(cmd));
     return (width+1)*(height+1);
+}
+
+static void ssd1306_write_words(uint8_t pos_x, uint8_t pos_y, uint8_t *words) {
+    uint8_t temp_x = pos_x;
+    while(*words) {
+        int byte_num = oled.setBlock(temp_x, pos_y, FONT_COLUMN_NUM-1, 0);
+        if(byte_num > 0 ) {
+            ssd1306.write_multi_pixels(&FONT(*words++), FONT_WORD_BYTES);
+            temp_x += 8;   // one word size is 6*8 bits
+        }
+    }
 }
