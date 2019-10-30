@@ -40,6 +40,6 @@ static void write_multi_pixels(uint8_t *pixel, uint16_t bytes) {
 }
 
 static void _delay_ms(uint32_t delay_ms) {
-    HAL_Delay(delay_ms);
+    // User need to implement the delay method
 }
 
