@@ -13,11 +13,11 @@ PCF8574_t pcf8574 = {  \
 };
 
 static void write_byte(uint8_t pdata) {
-    // call the I2C hardware to send the one byte data
+    // call the I2C hardware to transmit the one byte data
 }
 
 static void write_bytes(uint8_t *pdata, uint8_t bytes) {
-    // call the I2C hardware to send the multi-byte data
+    // call the I2C hardware to transmit the multi-byte data
 }
 
 static void _delay_ms(uint32_t delay_ms) {
