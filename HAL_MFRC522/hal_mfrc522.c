@@ -119,7 +119,7 @@ void mfrc_pcd_setAntennaGain(uint8_t gain_0_to_7) {
 
 uint8_t mfrc_pcd_PerformSelfTest(void) {
 
-    return 0;
+    return STATUS_OK;
 }
 
 uint8_t mfrc_isNewCardPresent(void) {
@@ -185,7 +185,7 @@ uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData
         return STATUS_ERROR;
     }
     if(er_col&0x0f) {
-        return STATUS_ERROR;
+        return STATUS_COLLISION;
     }
     
     if(n == 0) {
