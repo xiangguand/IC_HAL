@@ -2,7 +2,7 @@
 hal_lcd_pcf8574.h and hal_lcd_pcf8574.c are the hal file.  
 lcd_pcf8574.c is the file that user need to implement I2C function.
   
-Example, setting the RTC:  
+Example:  
 ```c
 init_i2c();   // I2C hardware initialize
 lcd.init();
