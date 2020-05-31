@@ -70,23 +70,23 @@ static void mfrc_pcd_clearRegisterBitMask(uint8_t reg, uint8_t mask) {
 
 static void mfrc_init(void) {
     mfrc522.dri->write_byte(TxModeReg, 0x00);
-	mfrc522.dri->write_byte(RxModeReg, 0x00);
-	// Reset ModWidthReg
-	mfrc522.dri->write_byte(ModWidthReg, 0x26);
+    mfrc522.dri->write_byte(RxModeReg, 0x00);
+    // Reset ModWidthReg
+    mfrc522.dri->write_byte(ModWidthReg, 0x26);
 
-	// When communicating with a PICC we need a timeout if something goes wrong.
-	// f_timer = 13.56 MHz / (2*TPreScaler+1) where TPreScaler = [TPrescaler_Hi:TPrescaler_Lo].
-	// TPrescaler_Hi are the four low bits in TModeReg. TPrescaler_Lo is TPrescalerReg.
-	mfrc522.dri->write_byte(TModeReg, 0x80);			// TAuto=1; timer starts automatically at the end of the transmission in all communication modes at all speeds
-	mfrc522.dri->write_byte(TPrescalerReg, 0xA9);		// TPreScaler = TModeReg[3..0]:TPrescalerReg, ie 0x0A9 = 169 => f_timer=40kHz, ie a timer period of 25s.
-	mfrc522.dri->write_byte(TReloadRegH, 0x03);		// Reload timer with 0x3E8 = 1000, ie 25ms before timeout.
-	mfrc522.dri->write_byte(TReloadRegL, 0xE8);
-	
-	mfrc522.dri->write_byte(TxASKReg, 0x40);		// Default 0x00. Force a 100 % ASK modulation independent of the ModGsPReg register setting
-	mfrc522.dri->write_byte(ModeReg, 0x3D);
-    
+    // When communicating with a PICC we need a timeout if something goes wrong.
+    // f_timer = 13.56 MHz / (2*TPreScaler+1) where TPreScaler = [TPrescaler_Hi:TPrescaler_Lo].
+    // TPrescaler_Hi are the four low bits in TModeReg. TPrescaler_Lo is TPrescalerReg.
+    mfrc522.dri->write_byte(TModeReg, 0x80);			// TAuto=1; timer starts automatically at the end of the transmission in all communication modes at all speeds
+    mfrc522.dri->write_byte(TPrescalerReg, 0xA9);		// TPreScaler = TModeReg[3..0]:TPrescalerReg, ie 0x0A9 = 169 => f_timer=40kHz, ie a timer period of 25s.
+    mfrc522.dri->write_byte(TReloadRegH, 0x03);		// Reload timer with 0x3E8 = 1000, ie 25ms before timeout.
+    mfrc522.dri->write_byte(TReloadRegL, 0xE8);
+
+    mfrc522.dri->write_byte(TxASKReg, 0x40);		// Default 0x00. Force a 100 % ASK modulation independent of the ModGsPReg register setting
+    mfrc522.dri->write_byte(ModeReg, 0x3D);
+
     mfrc522.dri->write_byte(FIFOLevelReg, 0x80);		// flush the FIFO buffer
-    
+
     mfrc522.pcd_antennaOn();
     mfrc522.pcd_setAntennaGain(4);  /* Max is 7 */
 }
@@ -130,13 +130,13 @@ static uint8_t mfrc_pcd_PerformSelfTest(void) {
 
 static uint8_t mfrc_isNewCardPresent(void) {
     uint8_t buff_atqa[2] = {0, 0};
-    
+
     // Reset baud rates
-	mfrc522.dri->write_byte(TxModeReg, 0x00);
-	mfrc522.dri->write_byte(RxModeReg, 0x00);
-	// Reset ModWidthReg
-	mfrc522.dri->write_byte(ModWidthReg, 0x26);
-    
+    mfrc522.dri->write_byte(TxModeReg, 0x00);
+    mfrc522.dri->write_byte(RxModeReg, 0x00);
+    // Reset ModWidthReg
+    mfrc522.dri->write_byte(ModWidthReg, 0x26);
+
     uint8_t status = mfrc522.picc_REQA(buff_atqa, sizeof(buff_atqa));
     if(buff_atqa[0] != 0 || buff_atqa[1] != 0) {
         printf("buf_atqa: %x, %x\r\n", buff_atqa[0], buff_atqa[1]);
@@ -156,16 +156,16 @@ static uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t 
     int32_t i;
     mfrc522.dri->write_byte(BitFramingReg, bitFrame);		// Bit adjustments
     mfrc522.dri->write_byte(CommandReg, PCD_Idle);			// Stop any active command.
-	mfrc522.dri->write_byte(ComIrqReg, 0x7F);			    // Clear all seven interrupt request bits
-	mfrc522.dri->write_byte(FIFOLevelReg, 0x80);		    // FlushBuffer = 1, FIFO initialization
+    mfrc522.dri->write_byte(ComIrqReg, 0x7F);			    // Clear all seven interrupt request bits
+    mfrc522.dri->write_byte(FIFOLevelReg, 0x80);		    // FlushBuffer = 1, FIFO initialization
     for(i=0;i<tx_sz;i++) {
         mfrc522.dri->write_byte(FIFODataReg, txData[i]);
     }                                                             
-	mfrc522.dri->write_byte(CommandReg, cmd);				// Execute the command
+    mfrc522.dri->write_byte(CommandReg, cmd);				// Execute the command
     if(cmd == PCD_Transceive) {
         mfrc522.pcd_setRegisterBitMask(BitFramingReg, 0x80); // Start send 
     }
-    
+
     for(i=5000;i>0;i--) {
         temp = mfrc522.pcd_readRegister(ComIrqReg);
         if(temp & rfid_irq) break;
@@ -173,34 +173,34 @@ static uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t 
     }
 
     if(i == 0) return STATUS_TIMEOUT;
-    
+
     uint8_t er_reg = mfrc522.pcd_readRegister(ErrorReg);
     uint8_t er_col = mfrc522.pcd_readRegister(CollReg);
     uint8_t n = mfrc522.pcd_readRegister(FIFOLevelReg);
-    
-//    printf("IRQ: %x\r\n", temp);
-//    printf("ER: %x\r\n", er_reg);
-//    printf("ControlReg : %d\r\n", mfrc522.pcd_readRegister(ControlReg));
-//    printf("status1: %x\r\n", mfrc522.pcd_readRegister(Status1Reg));
-//    printf("status2: %x\r\n", mfrc522.pcd_readRegister(Status2Reg));
-    
-//    printf("CollReg: %x\r\n", er_col);
-//    printf("FIFO data size : %d\r\n", n);
-    
+
+    // printf("IRQ: %x\r\n", temp);
+    // printf("ER: %x\r\n", er_reg);
+    // printf("ControlReg : %d\r\n", mfrc522.pcd_readRegister(ControlReg));
+    // printf("status1: %x\r\n", mfrc522.pcd_readRegister(Status1Reg));
+    // printf("status2: %x\r\n", mfrc522.pcd_readRegister(Status2Reg));
+
+    // printf("CollReg: %x\r\n", er_col);
+    // printf("FIFO data size : %d\r\n", n);
+
     if(er_reg) {
         return STATUS_ERROR;
     }
     if(er_col&0x0f) {
         return STATUS_COLLISION;
     }
-    
+
     if(n == 0) {
         n = 2;
     }
     else if(n > rx_sz) {
         n = rx_sz;
     }
-    
+
     for(i=0;i<n;i++) {
         rxData[i] = mfrc522.dri->read_byte(FIFODataReg);
     }
