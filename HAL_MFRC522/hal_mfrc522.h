@@ -7,9 +7,9 @@
  * MFRC522 HAL
  * Ref register and command definition
  * => https://github.com/miguelbalboa/rfid/blob/master/src/MFRC522.h
- * 
+ *
  * User should implement mfrc522 SPI
- * 
+ *
  * PCD: proximity coupling device
  * PICC: proximity integrated circuit card
  */
@@ -17,6 +17,10 @@
 #ifndef HAL_MFRC522_H
 #define HAL_MFRC522_H
 #include <stdint.h>
+
+#define ANTENNA_GAIN_POS    4
+#define ANTENNA_GAIN_MASK   (0x07<<ANTENNA_GAIN_POS)
+#define ANTENNA_ON_OFF_MASK 0x03
 
 enum PCD_Register {
     // Page 0: Command and status
@@ -26,7 +30,7 @@ enum PCD_Register {
     DivIEnReg				= 0x03 << 1,	// enable and disable interrupt request control bits
     ComIrqReg				= 0x04 << 1,	// interrupt request bits
     DivIrqReg				= 0x05 << 1,	// interrupt request bits
-    ErrorReg				= 0x06 << 1,	// error bits showing the error status of the last command executed 
+    ErrorReg				= 0x06 << 1,	// error bits showing the error status of the last command executed
     Status1Reg				= 0x07 << 1,	// communication status bits
     Status2Reg				= 0x08 << 1,	// receiver and transmitter status bits
     FIFODataReg				= 0x09 << 1,	// input and output of 64 byte FIFO buffer
@@ -36,10 +40,10 @@ enum PCD_Register {
     BitFramingReg			= 0x0D << 1,	// adjustments for bit-oriented frames
     CollReg					= 0x0E << 1,	// bit position of the first bit-collision detected on the RF interface
     //						  0x0F			// reserved for future use
-    
+
     // Page 1: Command
     // 						  0x10			// reserved for future use
-    ModeReg					= 0x11 << 1,	// defines general modes for transmitting and receiving 
+    ModeReg					= 0x11 << 1,	// defines general modes for transmitting and receiving
     TxModeReg				= 0x12 << 1,	// defines transmission data rate and framing
     RxModeReg				= 0x13 << 1,	// defines reception data rate and framing
     TxControlReg			= 0x14 << 1,	// controls the logical behavior of the antenna driver pins TX1 and TX2
@@ -54,7 +58,7 @@ enum PCD_Register {
     MfRxReg					= 0x1D << 1,	// controls some MIFARE communication receive parameters
     // 						  0x1E			// reserved for future use
     SerialSpeedReg			= 0x1F << 1,	// selects the speed of the serial UART interface
-    
+
     // Page 2: Configuration
     // 						  0x20			// reserved for future use
     CRCResultRegH			= 0x21 << 1,	// shows the MSB and LSB values of the CRC calculation
@@ -63,7 +67,7 @@ enum PCD_Register {
     ModWidthReg				= 0x24 << 1,	// controls the ModWidth setting?
     // 						  0x25			// reserved for future use
     RFCfgReg				= 0x26 << 1,	// configures the receiver gain
-    GsNReg					= 0x27 << 1,	// selects the conductance of the antenna driver pins TX1 and TX2 for modulation 
+    GsNReg					= 0x27 << 1,	// selects the conductance of the antenna driver pins TX1 and TX2 for modulation
     CWGsPReg				= 0x28 << 1,	// defines the conductance of the p-driver output during periods of no modulation
     ModGsPReg				= 0x29 << 1,	// defines the conductance of the p-driver output during periods of modulation
     TModeReg				= 0x2A << 1,	// defines settings for the internal timer
@@ -72,7 +76,7 @@ enum PCD_Register {
     TReloadRegL				= 0x2D << 1,
     TCounterValueRegH		= 0x2E << 1,	// shows the 16-bit timer value
     TCounterValueRegL		= 0x2F << 1,
-    
+
     // Page 3: Test Registers
     // 						  0x30			// reserved for future use
     TestSel1Reg				= 0x31 << 1,	// general test signal configuration
@@ -159,7 +163,7 @@ enum MIFARE_Misc {
 // last value set to 0xff, then compiler uses less ram, it seems some optimisations are triggered
 enum PICC_Type {
     PICC_TYPE_UNKNOWN		,
-    PICC_TYPE_ISO_14443_4	,	// PICC compliant with ISO/IEC 14443-4 
+    PICC_TYPE_ISO_14443_4	,	// PICC compliant with ISO/IEC 14443-4
     PICC_TYPE_ISO_18092		, 	// PICC compliant with ISO/IEC 18092 (NFC)
     PICC_TYPE_MIFARE_MINI	,	// MIFARE Classic protocol, 320 bytes
     PICC_TYPE_MIFARE_1K		,	// MIFARE Classic protocol, 1KB
@@ -191,8 +195,10 @@ typedef struct _mfrc522_dri_t {
 #ifdef MFRC522_SPI
     void (*cs_high)(void);
     void (*cs_low)(void);
-    void (*write_bytes)(uint8_t data, uint8_t sz);
-    void (*read_bytes)(uint8_t data, uint8_t sz);
+    void (*reset_high)(void);
+    void (*reset_low)(void);
+    void (*write_byte)(uint8_t reg, uint8_t txData);
+    uint8_t (*read_byte)(uint8_t reg);
 #else
     /* Anothoer driver */
 #endif
@@ -201,20 +207,25 @@ typedef struct _mfrc522_dri_t {
 typedef struct _hal_mfrc522_t {
     mfrc522_dri_t *dri;
     void (*pcd_writeRegister)(uint8_t reg, uint8_t value);
-	uint8_t (*pcd_readRegister)(uint8_t reg);
-	void (*pcd_readRegisters)(uint8_t reg, uint8_t count, uint8_t *values, uint8_t rxAlign);
-	void (*pcd_setRegisterBitMask)(uint8_t reg, uint8_t mask);
-	void (*pcd_clearRegisterBitMask)(uint8_t reg, uint8_t mask);
+    uint8_t (*pcd_readRegister)(uint8_t reg);
+    void (*pcd_readRegisters)(uint8_t reg, uint8_t count, uint8_t *values, uint8_t rxAlign);
+    void (*pcd_setRegisterBitMask)(uint8_t reg, uint8_t mask);
+    void (*pcd_clearRegisterBitMask)(uint8_t reg, uint8_t mask);
 
     void (*init)(void);
-	void (*init_hw)(uint8_t resetPowerDownPin);
-	void (*init_power_down)(uint8_t chipSelectPin, uint8_t resetPowerDownPin);
-	void (*pcd_reset)(void);
-	void (*pcd_antennaOn)(void);
-	void (*pcd_AntennaOff)(void);
-	uint8_t (*pcd_getAntennaGain)(void);
-	void (*pcd_setAntennaGain)(uint8_t mask);
-	uint8_t (*pcd_PerformSelfTest)(void);
+    void (*hardware_reset)(void);
+    void (*init_power_down)(uint8_t chipSelectPin, uint8_t resetPowerDownPin);
+    void (*pcd_reset)(void);
+    void (*pcd_antennaOn)(void);
+    void (*pcd_AntennaOff)(void);
+    uint8_t (*pcd_getAntennaGain)(void);
+    void (*pcd_setAntennaGain)(uint8_t gain_0_to_7);
+    uint8_t (*pcd_PerformSelfTest)(void);
+
+    uint8_t (*pcd_communicate_picc)(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData, uint8_t tx_sz, uint8_t *rxData, uint8_t rx_sz, uint8_t bitFrame);
+    uint8_t (*isNewCardPresent)(void);
+    uint8_t (*picc_REQA)(uint8_t *buff_atqa, uint8_t buff_sz);
+    void (*calculateCRC)(uint8_t *data, int len, uint8_t *result);
 }hal_mfc522_t;
 
 
