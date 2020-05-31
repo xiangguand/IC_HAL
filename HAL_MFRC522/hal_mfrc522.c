@@ -2,22 +2,23 @@
 #include <stdbool.h>
 #include <stdio.h>
 
-void mfrc_pcd_writeRegister(uint8_t reg, uint8_t value);
-uint8_t mfrc_pcd_readRegister(uint8_t reg);
-void mfrc_pcd_setRegisterBitMask(uint8_t reg, uint8_t mask);
-void mfrc_pcd_clearRegisterBitMask(uint8_t reg, uint8_t mask);
-void mfrc_init(void);
-void mfrc_hardware_reset(void);
-void mfrc_init_power_down(uint8_t chipSelectPin, uint8_t resetPowerDownPin);
-void mfrc_pcd_reset(void);
-void mfrc_pcd_antennaOn(void);
-void mfrc_pcd_AntennaOff(void);
-uint8_t mfrc_pcd_getAntennaGain(void);
-void mfrc_pcd_setAntennaGain(uint8_t gain_0_to_7);
-uint8_t mfrc_pcd_PerformSelfTest(void);
-uint8_t mfrc_isNewCardPresent(void);
-uint8_t mfrc_picc_REQA(uint8_t *buff_atqa, uint8_t buff_sz);
-uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData, uint8_t tx_sz, 
+static void mfrc_hardware_init(void);
+static void mfrc_pcd_writeRegister(uint8_t reg, uint8_t value);
+static uint8_t mfrc_pcd_readRegister(uint8_t reg);
+static void mfrc_pcd_setRegisterBitMask(uint8_t reg, uint8_t mask);
+static void mfrc_pcd_clearRegisterBitMask(uint8_t reg, uint8_t mask);
+static void mfrc_init(void);
+static void mfrc_hardware_reset(void);
+static void mfrc_init_power_down(uint8_t chipSelectPin, uint8_t resetPowerDownPin);
+static void mfrc_pcd_reset(void);
+static void mfrc_pcd_antennaOn(void);
+static void mfrc_pcd_AntennaOff(void);
+static uint8_t mfrc_pcd_getAntennaGain(void);
+static void mfrc_pcd_setAntennaGain(uint8_t gain_0_to_7);
+static uint8_t mfrc_pcd_PerformSelfTest(void);
+static uint8_t mfrc_isNewCardPresent(void);
+static uint8_t mfrc_picc_REQA(uint8_t *buff_atqa, uint8_t buff_sz);
+static uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData, uint8_t tx_sz, 
                                   uint8_t *rxData, uint8_t rx_sz, uint8_t bitFrame);
 void mfrc_calculateCRC(uint8_t *data, int len, uint8_t *result);
 
@@ -25,6 +26,7 @@ extern mfrc522_dri_t mfrc522_dri;
 
 hal_mfc522_t mfrc522 = {
     .dri = &mfrc522_dri,                                          \
+    .hardware_init = mfrc_hardware_init,                          \
     .pcd_writeRegister = mfrc_pcd_writeRegister,                  \
     .pcd_readRegister = mfrc_pcd_readRegister,                    \
     .pcd_setRegisterBitMask = mfrc_pcd_setRegisterBitMask,        \
@@ -44,25 +46,29 @@ hal_mfc522_t mfrc522 = {
     .calculateCRC = mfrc_calculateCRC,                            \
 };
 
-void mfrc_pcd_writeRegister(uint8_t reg, uint8_t value) {
+static void mfrc_hardware_init(void) {
+    mfrc522.dri->hw_init();
+}
+
+static void mfrc_pcd_writeRegister(uint8_t reg, uint8_t value) {
     mfrc522.dri->cs_low();
     mfrc522.dri->write_byte(reg, value);
     mfrc522.dri->cs_high();
 }
 
-uint8_t mfrc_pcd_readRegister(uint8_t reg) {
+static uint8_t mfrc_pcd_readRegister(uint8_t reg) {
     return mfrc522.dri->read_byte(reg);
 }
 
-void mfrc_pcd_setRegisterBitMask(uint8_t reg, uint8_t mask) {
+static void mfrc_pcd_setRegisterBitMask(uint8_t reg, uint8_t mask) {
     mfrc522.dri->write_byte(reg, (mfrc522.pcd_readRegister(reg) | (mask)));
 }
 
-void mfrc_pcd_clearRegisterBitMask(uint8_t reg, uint8_t mask) {
+static void mfrc_pcd_clearRegisterBitMask(uint8_t reg, uint8_t mask) {
     mfrc522.dri->write_byte(reg, (mfrc522.pcd_readRegister(reg) & (~mask)));
 }
 
-void mfrc_init(void) {
+static void mfrc_init(void) {
     mfrc522.dri->write_byte(TxModeReg, 0x00);
 	mfrc522.dri->write_byte(RxModeReg, 0x00);
 	// Reset ModWidthReg
@@ -85,44 +91,44 @@ void mfrc_init(void) {
     mfrc522.pcd_setAntennaGain(4);  /* Max is 7 */
 }
 
-void mfrc_hardware_reset(void) {
+static void mfrc_hardware_reset(void) {
     mfrc522.dri->reset_low();
     /* Delay for a while */
     for(uint32_t i=0;i<1000000;i++) __asm("nop");
     mfrc522.dri->reset_high();
 }
 
-void mfrc_init_power_down(uint8_t chipSelectPin, uint8_t resetPowerDownPin) {
+static void mfrc_init_power_down(uint8_t chipSelectPin, uint8_t resetPowerDownPin) {
 
 }
 
-void mfrc_pcd_reset(void) {
+static void mfrc_pcd_reset(void) {
 
 }
 
-void mfrc_pcd_antennaOn(void) { 
+static void mfrc_pcd_antennaOn(void) { 
     mfrc522.pcd_setRegisterBitMask(TxControlReg, ANTENNA_ON_OFF_MASK);
 }
 
-void mfrc_pcd_AntennaOff(void) {
+static void mfrc_pcd_AntennaOff(void) {
     mfrc522.pcd_clearRegisterBitMask(TxControlReg, ANTENNA_ON_OFF_MASK);
 }
 
-uint8_t mfrc_pcd_getAntennaGain(void) {
+static uint8_t mfrc_pcd_getAntennaGain(void) {
     return (mfrc522.pcd_readRegister(RFCfgReg) & ANTENNA_GAIN_MASK) >> ANTENNA_GAIN_POS;
 }
 
-void mfrc_pcd_setAntennaGain(uint8_t gain_0_to_7) {
+static void mfrc_pcd_setAntennaGain(uint8_t gain_0_to_7) {
     mfrc522.dri->write_byte(RFCfgReg, (mfrc522.pcd_readRegister(RFCfgReg) & (~ANTENNA_GAIN_MASK)) 
                                           | ((gain_0_to_7 << ANTENNA_GAIN_POS) & ANTENNA_GAIN_MASK));
 }
 
-uint8_t mfrc_pcd_PerformSelfTest(void) {
+static uint8_t mfrc_pcd_PerformSelfTest(void) {
 
     return STATUS_OK;
 }
 
-uint8_t mfrc_isNewCardPresent(void) {
+static uint8_t mfrc_isNewCardPresent(void) {
     uint8_t buff_atqa[2] = {0, 0};
     
     // Reset baud rates
@@ -138,13 +144,13 @@ uint8_t mfrc_isNewCardPresent(void) {
     return status;
 }
 
-uint8_t mfrc_picc_REQA(uint8_t *buff_atqa, uint8_t buff_sz) {
+static uint8_t mfrc_picc_REQA(uint8_t *buff_atqa, uint8_t buff_sz) {
     uint8_t txData = PICC_CMD_REQA;
     mfrc522.pcd_clearRegisterBitMask(CollReg, 0x80);
     return mfrc522.pcd_communicate_picc(PCD_Transceive, 0x30, &txData, 1, buff_atqa, buff_sz, 0x07);
 }
 
-uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData, uint8_t tx_sz, 
+static uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData, uint8_t tx_sz, 
                                    uint8_t *rxData, uint8_t rx_sz, uint8_t bitFrame) {
     uint8_t temp;
     int32_t i;
@@ -203,7 +209,7 @@ uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData
 }
 
 
-void mfrc_calculateCRC(uint8_t *data, int len, uint8_t *result) {
+static void mfrc_calculateCRC(uint8_t *data, int len, uint8_t *result) {
     int i;
     uint8_t n;
 

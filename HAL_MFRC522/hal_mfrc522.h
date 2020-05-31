@@ -193,6 +193,7 @@ enum StatusCode {
 
 typedef struct _mfrc522_dri_t {
 #ifdef MFRC522_SPI
+    void (*hw_init)(void);
     void (*cs_high)(void);
     void (*cs_low)(void);
     void (*reset_high)(void);
@@ -206,6 +207,7 @@ typedef struct _mfrc522_dri_t {
 
 typedef struct _hal_mfrc522_t {
     mfrc522_dri_t *dri;
+    void (*hardware_init)(void);
     void (*pcd_writeRegister)(uint8_t reg, uint8_t value);
     uint8_t (*pcd_readRegister)(uint8_t reg);
     void (*pcd_readRegisters)(uint8_t reg, uint8_t count, uint8_t *values, uint8_t rxAlign);
