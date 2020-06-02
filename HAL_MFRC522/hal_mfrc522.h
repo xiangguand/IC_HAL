@@ -135,7 +135,7 @@ enum PICC_Command {
     PICC_CMD_SEL_CL1		= 0x93,		// Anti collision/Select, Cascade Level 1
     PICC_CMD_SEL_CL2		= 0x95,		// Anti collision/Select, Cascade Level 2
     PICC_CMD_SEL_CL3		= 0x97,		// Anti collision/Select, Cascade Level 3
-    PICC_CMD_HLTA			= 0x50,		// HaLT command, Type A. Instructs an ACTIVE PICC to go to state HALT.
+    PICC_CMD_HALT			= 0x50,		// HaLT command, Type A. Instructs an ACTIVE PICC to go to state HALT.
     PICC_CMD_RATS           = 0xE0,     // Request command for Answer To Reset.
     // The commands used for MIFARE Classic (from http://www.mouser.com/ds/2/302/MF1S503x-89574.pdf, Section 9)
     // Use PCD_MFAuthent to authenticate access to a sector, then use these commands to read/write/modify the blocks on the sector.
@@ -205,6 +205,16 @@ typedef struct _mfrc522_dri_t {
 #endif
 } mfrc522_dri_t;
 
+
+typedef struct _anti_col_ {
+    uint8_t uid[4];
+    uint8_t bcc1;
+}anti_col1_t;
+
+typedef struct _block_unit_ {
+    uint8_t data[16];
+}block_unit_t;
+
 typedef struct _hal_mfrc522_t {
     mfrc522_dri_t *dri;
     void (*hardware_init)(void);
@@ -227,6 +237,12 @@ typedef struct _hal_mfrc522_t {
     uint8_t (*pcd_communicate_picc)(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData, uint8_t tx_sz, uint8_t *rxData, uint8_t rx_sz, uint8_t bitFrame);
     uint8_t (*isNewCardPresent)(void);
     uint8_t (*picc_REQA)(uint8_t *buff_atqa, uint8_t buff_sz);
+    uint8_t (*picc_halt)(void);
+    uint8_t (*pcd_antColLoop1)(anti_col1_t *result);
+    uint8_t (*pcd_select)(anti_col1_t *card_uid, uint8_t *sak);
+    uint8_t (*pcd_auth)(anti_col1_t *card_uid, uint8_t *key);
+    uint8_t (*pcd_read_block)(uint8_t addr, block_unit_t *block_data);
+    uint8_t (*pcd_write_block)(uint8_t addr, block_unit_t *block_data);
     void (*calculateCRC)(uint8_t *data, int len, uint8_t *result);
 }hal_mfc522_t;
 
