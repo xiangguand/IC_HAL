@@ -233,6 +233,7 @@ typedef struct _hal_mfrc522_t {
     uint8_t (*pcd_getAntennaGain)(void);
     void (*pcd_setAntennaGain)(uint8_t gain_0_to_7);
     uint8_t (*pcd_PerformSelfTest)(void);
+    void (*pcd_stop_encryption)(void);
 
     uint8_t (*pcd_communicate_picc)(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData, uint8_t tx_sz, uint8_t *rxData, uint8_t rx_sz, uint8_t bitFrame);
     uint8_t (*isNewCardPresent)(void);
@@ -240,7 +241,7 @@ typedef struct _hal_mfrc522_t {
     uint8_t (*picc_halt)(void);
     uint8_t (*pcd_antColLoop1)(anti_col1_t *result);
     uint8_t (*pcd_select)(anti_col1_t *card_uid, uint8_t *sak);
-    uint8_t (*pcd_auth)(anti_col1_t *card_uid, uint8_t *key);
+    uint8_t (*pcd_auth)(uint8_t keyAorB, uint8_t block, anti_col1_t *card_uid, uint8_t *key);
     uint8_t (*pcd_read_block)(uint8_t addr, block_unit_t *block_data);
     uint8_t (*pcd_write_block)(uint8_t addr, block_unit_t *block_data);
     void (*calculateCRC)(uint8_t *data, int len, uint8_t *result);

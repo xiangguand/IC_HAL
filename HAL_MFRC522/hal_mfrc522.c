@@ -17,6 +17,7 @@ static void mfrc_pcd_AntennaOff(void);
 static uint8_t mfrc_pcd_getAntennaGain(void);
 static void mfrc_pcd_setAntennaGain(uint8_t gain_0_to_7);
 static uint8_t mfrc_pcd_PerformSelfTest(void);
+static void mfrc_pcd_stop_encryption(void);
 static uint8_t mfrc_isNewCardPresent(void);
 static uint8_t mfrc_picc_REQA(uint8_t *buff_atqa, uint8_t buff_sz);
 static uint8_t mfrc_picc_halt(void);
@@ -24,7 +25,7 @@ static uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t 
                                   uint8_t *rxData, uint8_t rx_sz, uint8_t bitFrame);
 static uint8_t mfrc_pcd_antColLoop1(anti_col1_t *result);
 static uint8_t mfrc_pcd_select(anti_col1_t *card_uid, uint8_t *sak);
-static uint8_t mfrc_pcd_auth(anti_col1_t *card_uid, uint8_t *key);
+static uint8_t mfrc_pcd_auth(uint8_t keyAorB, uint8_t block, anti_col1_t *card_uid, uint8_t *key);
 static uint8_t mfrc_pcd_read_block(uint8_t addr, block_unit_t *block_data);
 static uint8_t mfrc_pcd_write_block(uint8_t addr, block_unit_t *block_data);
 static void mfrc_calculateCRC(uint8_t *data, int len, uint8_t *result);
@@ -47,6 +48,7 @@ hal_mfc522_t mfrc522 = {
     .pcd_getAntennaGain = mfrc_pcd_getAntennaGain,                \
     .pcd_setAntennaGain = mfrc_pcd_setAntennaGain,                \
     .pcd_PerformSelfTest = mfrc_pcd_PerformSelfTest,              \
+    .pcd_stop_encryption = mfrc_pcd_stop_encryption,              \
     .isNewCardPresent = mfrc_isNewCardPresent,                    \
     .picc_REQA = mfrc_picc_REQA,                                  \
     .picc_halt = mfrc_picc_halt,                                  \
@@ -141,6 +143,10 @@ static uint8_t mfrc_pcd_PerformSelfTest(void) {
     return STATUS_OK;
 }
 
+static void mfrc_pcd_stop_encryption(void) {
+    mfrc522.pcd_clearRegisterBitMask(Status2Reg, 0x08);  // turn off encryption
+}
+
 static uint8_t mfrc_isNewCardPresent(void) {
     uint8_t buff_atqa[2] = {0, 0};
     
@@ -168,13 +174,9 @@ static uint8_t mfrc_picc_halt(void) {
     uint8_t txData[] = {PICC_CMD_HALT, 0};
     mfrc522.calculateCRC(txData, 2, &txData[2]);
     uint8_t dummy;
-    if(mfrc522.pcd_communicate_picc(PCD_Transceive, 0x30, txData, 4, &dummy, 1, 0) == STATUS_TIMEOUT) {
-        return STATUS_OK;
-    }
-    else {
-        return STATUS_ERROR;
-    }
-    
+    mfrc522.pcd_communicate_picc(PCD_Transceive, 0x30, txData, 4, &dummy, 1, 0);
+    mfrc522.pcd_stop_encryption();
+    return STATUS_OK;
 }
 
 static uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t *txData, uint8_t tx_sz, 
@@ -193,7 +195,7 @@ static uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t 
         mfrc522.pcd_setRegisterBitMask(BitFramingReg, 0x80); // Start send 
     }
     
-    for(i=10000;i>0;i--) {
+    for(i=2000;i>0;i--) {
         temp = mfrc522.pcd_readRegister(ComIrqReg);
         if(temp & rfid_irq) break;
         if(temp & 0x01) {
@@ -218,7 +220,7 @@ static uint8_t mfrc_pcd_communicate_picc(uint8_t cmd, uint8_t rfid_irq, uint8_t 
     }
     
     if(n == 0) {
-        printf("No data\r\n");
+//        printf("No data\r\n");
         n = 1;
     }
     else if(n > rx_sz) {
@@ -265,19 +267,22 @@ static uint8_t mfrc_pcd_select(anti_col1_t *card_uid, uint8_t *sak) {
     }
 }
 
-static uint8_t mfrc_pcd_auth(anti_col1_t *card_uid, uint8_t *key) {
+static uint8_t mfrc_pcd_auth(uint8_t keyAorB, uint8_t block, anti_col1_t *card_uid, uint8_t *key) {
+    if((keyAorB != PICC_CMD_MF_AUTH_KEY_A) && (keyAorB != PICC_CMD_MF_AUTH_KEY_B)) {
+        return STATUS_ERROR;
+    }
     uint8_t txData[12];
     mfrc522.dri->write_byte(CollReg, 0x80);
-    txData[0] = PICC_CMD_MF_AUTH_KEY_A;
-    txData[1] = 0x00;
+    txData[0] = keyAorB;
+    txData[1] = block;
     for(uint8_t i=0;i<MF_KEY_SIZE;i++) {
         txData[i+2] = key[i];
     }
     for(uint8_t i=0;i<4;i++) {
         txData[i+8] = card_uid->uid[i];
     }
-    uint8_t temp;
-    if(mfrc522.pcd_communicate_picc(PCD_MFAuthent, 0x10, txData, 12, &temp, 1, 0) == STATUS_OK) {
+    uint8_t temp[4] = {0, 0, 0, 0};
+    if(mfrc522.pcd_communicate_picc(PCD_MFAuthent, 0x10, txData, 12, temp, 4, 0) == STATUS_OK) {
         return STATUS_OK;
     }
     else {
@@ -292,7 +297,7 @@ static uint8_t mfrc_pcd_read_block(uint8_t addr, block_unit_t *block_data) {
     txData[1] = addr;
     mfrc522.calculateCRC(txData, 2, &txData[2]);
 
-    if(mfrc522.pcd_communicate_picc(PCD_Transceive, 0x30, txData, 4, block_data->data, 16, 0) == STATUS_OK) {
+    if(mfrc522.pcd_communicate_picc(PCD_Transceive, 0x30, txData, 4, &block_data->data[0], 16, 0) == STATUS_OK) {
         return STATUS_OK;
     }
     else {
@@ -308,7 +313,6 @@ static uint8_t mfrc_pcd_write_block(uint8_t addr, block_unit_t *block_data) {
     mfrc522.calculateCRC(txData, 2, &txData[2]);
 
     uint8_t picc_ack = 0;
-    printf("XXXXXXXXXX\r\n");
     if(mfrc522.pcd_communicate_picc(PCD_Transceive, 0x30, txData, 4, &picc_ack, 1, 0x00) != STATUS_OK) {
         return STATUS_ERROR;
     }
