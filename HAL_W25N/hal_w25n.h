@@ -2,7 +2,7 @@
  * @file hal_w25n.h
  * @author Danny Deng
  * @brief w25n01g hardware abstract file
- * @date 2021.10.02
+ * @date 2021.10.04
  *
  * 1 Gbit (119.2 MBytes)
  * 128 Mbit X 8 = 16 MBytes X 8
@@ -15,6 +15,11 @@
 
 #ifndef HAL_W25N_H
 #define HAL_W25N_H
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdint.h>
 
 #define W25N_TIMEOUT_COUNTER         1000000
@@ -73,12 +78,12 @@ typedef struct _hw_w25n_t {
     uint8_t (*spi_swap)(uint8_t data);
     void (*cs_low)(void);
     void (*cs_high)(void);
-    void (*hold_low)(void);
-    void (*hold_high)(void);
+    void (*wp_low)(void);
+    void (*wp_high)(void);
 } hw_w25n_t;
 
-
-
-
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* HAL_W25N_H */
